@@ -3,12 +3,12 @@
 import numpy as np
 
 
-def gs_main(matrix: np.ndarray, eps = 1e-14):
+def QR_decomposition(matrix, eps = 1e-14):
     """
-    The function performs the GS Algo to make the vectors in matrix orthonormal.
+    The function performs QR decomposition on the matrix
     :param eps: epsilon for linear dependency, default 1e-14
     :param matrix: matrix with linear independent vectors
-    :return: matrix with the vector after Gram Schmidting them
+    :return: Q matrix, R matrix and matrix after removing linear dependent vectors
     """
     rows, cols = matrix.shape
     A = matrix.copy()
@@ -41,52 +41,34 @@ def gs_main(matrix: np.ndarray, eps = 1e-14):
     return A_updated, Q, R
 
 
-
-input_matrix = np.array([
-    [1, 1, 3],
-    [2, 1, 4],
-    [3, -1, 1],
-    [2, 1, 1],
-    [1, 0, 2]
-], dtype=float)
-
-q6_matrix = np.array([
-    [1, -1],
-    [1, 1],
-    [2, 1]
-], dtype=float)
-
-
-A_updated, Q, R = gs_main(input_matrix)
-#A_updated = A_updated.astype(int)
-print("Updated Matrix A (after removing dependent columns if any):")
-print(A_updated)
-
-print("\nOrthonormal Matrix Q:")
-print(Q)
-
-print("\nUpper Triangular Matrix R:")
-print(R)
-
-# Verify that Q is orthonormal: Q^T * Q = I
-print("\nVerification (Q^T * Q should be identity):")
-print(np.dot(Q.T, Q))
-
-# Verify that QR reconstructs the (updated) A
-print("\nVerification (Q * R should reconstruct updated A):")
-print(np.dot(Q, R))
+def test_QR():
+    input_matrix = np.array([
+        [1, 1, 3],
+        [2, 1, 4],
+        [3, -1, 1],
+        [2, 1, 1],
+        [1, 0, 2]
+    ], dtype=float)
+    q6_matrix = np.array([
+        [1, -1],
+        [1, 1],
+        [2, 1]
+    ], dtype=float)
+    A_updated, Q, R = QR_decomposition(input_matrix)
+    # A_updated = A_updated.astype(int)
+    print("Updated Matrix A (after removing dependent columns if any):")
+    print(A_updated)
+    print("\nOrthonormal Matrix Q:")
+    print(Q)
+    print("\nUpper Triangular Matrix R:")
+    print(R)
+    # Verify that Q is orthonormal: Q^T * Q = I
+    print("\nVerification (Q^T * Q should be identity):")
+    print(np.dot(Q.T, Q))
+    # Verify that QR reconstructs the (updated) A
+    print("\nVerification (Q * R should reconstruct updated A):")
+    print(np.dot(Q, R))
 
 
-q6_matrix_updated, Q, R = gs_main(q6_matrix)
-print("q6 updated: ")
-print(q6_matrix_updated)
-print("Q:")
-print(Q)
-print("R:")
-print(R)
-
-print("verification (Q^T * Q should be identity):")
-print(np.dot(Q.T, Q))
-
-print("\nVerification (Q * R should reconstruct updated A):")
-print(np.dot(Q, R))
+if __name__ == "__main__":
+    test_QR()

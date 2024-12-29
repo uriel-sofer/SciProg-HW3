@@ -7,17 +7,16 @@ def chirp_gen(duration, initial_f0 = 1000, mu_modifier = 550, fs = 44_100):
     """
     Creates different chirp sounds, depending on duration, initial_f0, and mu_modifier.
     Formula: cos(2pi * f_0 * t + 2pi * mu * t**2)
-    :param duration: duration of chirp
-    :param initial_f0: initial frequency of chirp in Hz
-    :param mu_modifier: frequency of chirp in Hz
-    :param fs: sampling frequency
-    :return: tuple of time and chirp signal function
     """
     Ts = 1 / fs
     t = np.arange(0, duration, Ts)
     return t, cos(2 * pi * initial_f0 * t + 2 * pi * mu_modifier * t**2)
 
+
 def seven_second_chirp():
+    """
+    Generates chirp from hardcoded values
+    """
     # Generate and show 500 three times
     tt, sig = chirp_gen(0.7, 1_000, 550)
     start = slice(500)
@@ -37,6 +36,7 @@ def seven_second_chirp():
     sd.wait()
     plt.tight_layout()
     plt.show()
+
 
 def chirp_with_noise():
     """
@@ -75,15 +75,10 @@ def chirp_with_noise():
     sd.play(sig, fs)
     sd.wait()
 
+
 def find_chirp(noise_sig, chirp_ref, frame_size, step=100, fs=44_100):
     """
     Finds the reference chirp in the noisy signal and returns the start time index in seconds.
-    :param noise_sig: Noise signal (np.array)
-    :param chirp_ref: Reference chirp (np.array)
-    :param frame_size: Duration of each frame in seconds
-    :param step: Step size in samples
-    :param fs: Sampling frequency in Hz
-    :return: Time index (in seconds) where the reference chirp is found
     """
     frame_size_samples = int(frame_size * fs)
 
@@ -114,6 +109,7 @@ def find_chirp(noise_sig, chirp_ref, frame_size, step=100, fs=44_100):
     best_time = best_index / fs
     return best_time
 
+
 def test_find_chirp_with_hidden_signal():
     """
     Tests find_chirp with a noise-only signal containing a hidden chirp.
@@ -134,14 +130,15 @@ def test_find_chirp_with_hidden_signal():
     frame_size = 0.1
     step = 100
 
+    print("Detecting from generated chirp...")
     # Detect chirp location using find_chirp
     chirp_start_time = find_chirp(noisy_signal, chirp_ref, frame_size, step, fs)
     print(f"The chirp starts at {chirp_start_time:.2f} seconds.")
 
     time_noisy_signal = np.linspace(0, noise_dur, len(noisy_signal))
 
-    # Call the play_and_display_with_correlation method
-    play_and_display(chirp_start_time, fs, noisy_signal, time_noisy_signal)
+    play_and_display(chirp_start_time, fs, noisy_signal, time_noisy_signal, chirp_ref)
+
 
 def test_find_chirp_with_loaded_data():
     """
@@ -155,32 +152,42 @@ def test_find_chirp_with_loaded_data():
     frame_size = 0.7
     step = 100
 
+    print("Detecting from loaded chirp...")
     # Detect chirp location
     chirp_start_time = find_chirp(xnsig, chirp, frame_size, step, fs)
     print(f"The chirp starts at approximately {chirp_start_time:.2f} seconds.")
 
     time_xnsig = np.linspace(0, len(xnsig) / fs, len(xnsig))
 
-    play_and_display(chirp_start_time, fs, xnsig, time_xnsig)
+    play_and_display(chirp_start_time, fs, xnsig, time_xnsig, chirp)
 
-def play_and_display(chirp_start_time, fs, noisy_signal, tt):
-    """
-    Plays the noisy signal, displays it with detected chirp, and shows cross-correlation with the maximum highlighted.
-    :param chirp_start_time: Detected chirp start time in seconds
-    :param fs: Sampling frequency
-    :param noisy_signal: The noisy signal (numpy array)
-    :param tt: Time array for the noisy signal
-    """
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
-    # Plot noisy signal
-    ax1.plot(tt, noisy_signal, label="Noisy Signal with Hidden Chirp")
-    ax1.axvline(chirp_start_time, color='red', linestyle='--', label="Detected Chirp Start")
-    ax1.set_title("Noisy Signal with Hidden Chirp")
-    ax1.set_xlabel("Time (s)")
-    ax1.set_ylabel("Amplitude")
-    ax1.grid(True)
-    ax1.legend()
+def play_and_display(chirp_start_time, fs, noisy_signal, tt, chirp_ref=None):
+    """
+    Plays the noisy signal, displays it with detected chirp, and optionally shows cross-correlation with the maximum highlighted.
+    """
+    if chirp_ref is not None:
+        print("Calculating cross-correlation...")
+        # Compute cross-correlation
+        correlation = np.correlate(noisy_signal, chirp_ref, mode="valid")
+        correlation_time = np.linspace(0, len(correlation) / fs, len(correlation))
+
+        # Find maximum correlation
+        max_value = np.max(correlation)
+        max_index = np.where(correlation == max_value)[0][0]
+        max_time = correlation_time[max_index]  # First occurrence of the max
+
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+
+        # Plot noisy signal
+        plot_ax1(ax1, chirp_start_time, noisy_signal, tt)
+
+        # Plot cross-correlation
+        plot_ax2(ax2, correlation, correlation_time, max_time, max_value)
+    else:
+        # Create a single plot without cross-correlation
+        fig, ax1 = plt.subplots(figsize=(12, 6))
+        plot_ax1(ax1, chirp_start_time, noisy_signal, tt)
 
     plt.tight_layout()
     plt.show()
@@ -191,8 +198,37 @@ def play_and_display(chirp_start_time, fs, noisy_signal, tt):
     sd.wait()
 
 
-# Run the test
-test_find_chirp_with_loaded_data()
+def plot_ax1(ax1, chirp_start_time, noisy_signal, tt):
+    """
+    Plots the noisy signal
+    """
+    ax1.plot(tt, noisy_signal, label="Noisy Signal with Hidden Chirp")
+    ax1.axvline(chirp_start_time, color='red', linestyle='--', label="Detected Chirp Start")
+    ax1.set_title("Noisy Signal with Hidden Chirp")
+    ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Amplitude")
+    ax1.grid(True)
+    ax1.legend()
+
+
+def plot_ax2(ax2, correlation, correlation_time, max_time, max_value):
+    """
+    Plots the cross-correlation with highlighted. maximum
+    """
+    ax2.plot(correlation_time, correlation, label="Cross-Correlation Coefficient")
+    ax2.scatter(max_time, max_value, color='red', label=f"Max Value ({max_value:.2f})", zorder=5)
+    ax2.set_title("Cross-Correlation Between Noisy Signal and Chirp Over Time")
+    ax2.set_xlabel("Time (s)")
+    ax2.set_ylabel("Correlation Coefficient")
+    ax2.axvline(max_time, color='red', linestyle='--', label=f"Max Point at {max_time:.2f}s")
+    ax2.grid(True)
+    ax2.legend()
+
+
+if __name__ == "__main__":
+    # Run the test
+    test_find_chirp_with_hidden_signal()
+    test_find_chirp_with_loaded_data()
 
 
 
