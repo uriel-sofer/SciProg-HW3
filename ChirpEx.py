@@ -45,7 +45,7 @@ def chirp_with_noise():
     fs = 44_100
     chirp_dur = 20
 
-    tt, sig = chirp_gen(chirp_dur, fs=fs)
+    tt, sig = chirp_gen(chirp_dur)
 
     noise = np.random.randn(len(tt)) * 0.35
     start_idx = int(12 * fs)
@@ -85,14 +85,13 @@ def find_chirp(noise_sig, chirp_ref, frame_size, step=100, fs=44_100):
     :param fs: Sampling frequency in Hz
     :return: Time index (in seconds) where the reference chirp is found
     """
-    # Convert frame size to samples
     frame_size_samples = int(frame_size * fs)
 
     # Ensure chirp_ref matches frame size
     chirp_ref = chirp_ref[:frame_size_samples]
     chirp_ref_norm = np.linalg.norm(chirp_ref)
 
-    max_similarity = -np.inf
+    max_similarity = 0
     best_index = 0
 
     for start_idx in range(0, len(noise_sig) - frame_size_samples + 1, step):
@@ -120,48 +119,82 @@ def test_find_chirp_with_hidden_signal():
     Tests find_chirp with a noise-only signal containing a hidden chirp.
     """
     fs = 44_100
-    chirp_dur = 5  # Chirp duration in seconds
-    noise_dur = 20  # Total duration of the noise signal in seconds
-    start_time = 7  # Time (in seconds) where the chirp starts
+    chirp_dur = 5
+    noise_dur = 20
+    start_time = 7
 
-    # Generate the reference chirp
     _, chirp_ref = chirp_gen(chirp_dur, fs=fs)
 
-    # Generate a noise signal
     noisy_signal = np.random.randn(int(noise_dur * fs)) * 0.35
 
-    # Embed the chirp into the noisy signal at the specified location
     embed_start_idx = int(start_time * fs)
     embed_end_idx = embed_start_idx + len(chirp_ref)
     noisy_signal[embed_start_idx:embed_end_idx] += chirp_ref
 
-    # Use frame size for analysis (does not modify chirp_ref)
-    frame_size = 0.1  # Frame size in seconds
-    step = 100  # Step size in samples
+    frame_size = 0.1
+    step = 100
 
-    # Find the chirp in the noisy signal
+    # Detect chirp location using find_chirp
     chirp_start_time = find_chirp(noisy_signal, chirp_ref, frame_size, step, fs)
-
     print(f"The chirp starts at {chirp_start_time:.2f} seconds.")
 
-    # Plot the noisy signal with the detected chirp location
-    tt = np.linspace(0, noise_dur, len(noisy_signal))
-    fig, ax = plt.subplots(figsize=(12, 4))
-    ax.plot(tt, noisy_signal, label="Noisy Signal with Hidden Chirp")
-    ax.axvline(chirp_start_time, color='red', linestyle='--', label="Detected Chirp Start")
-    ax.set_title("Noisy Signal with Hidden Chirp")
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Amplitude")
-    ax.grid(True)
-    ax.legend()
+    time_noisy_signal = np.linspace(0, noise_dur, len(noisy_signal))
+
+    # Call the play_and_display_with_correlation method
+    play_and_display(chirp_start_time, fs, noisy_signal, time_noisy_signal)
+
+def test_find_chirp_with_loaded_data():
+    """
+    Tests find_chirp with loaded sound data (chirp and noisy signal).
+    """
+    # Load the chirp and noisy signal
+    chirp = np.load("chirp.npy")
+    xnsig = np.load("xnsig.npy")
+
+    fs = 44_100
+    frame_size = 0.7
+    step = 100
+
+    # Detect chirp location
+    chirp_start_time = find_chirp(xnsig, chirp, frame_size, step, fs)
+    print(f"The chirp starts at approximately {chirp_start_time:.2f} seconds.")
+
+    time_xnsig = np.linspace(0, len(xnsig) / fs, len(xnsig))
+
+    play_and_display(chirp_start_time, fs, xnsig, time_xnsig)
+
+def play_and_display(chirp_start_time, fs, noisy_signal, tt):
+    """
+    Plays the noisy signal, displays it with detected chirp, and shows cross-correlation with the maximum highlighted.
+    :param chirp_start_time: Detected chirp start time in seconds
+    :param fs: Sampling frequency
+    :param noisy_signal: The noisy signal (numpy array)
+    :param tt: Time array for the noisy signal
+    """
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+
+    # Plot noisy signal
+    ax1.plot(tt, noisy_signal, label="Noisy Signal with Hidden Chirp")
+    ax1.axvline(chirp_start_time, color='red', linestyle='--', label="Detected Chirp Start")
+    ax1.set_title("Noisy Signal with Hidden Chirp")
+    ax1.set_xlabel("Time (s)")
+    ax1.set_ylabel("Amplitude")
+    ax1.grid(True)
+    ax1.legend()
+
     plt.tight_layout()
     plt.show()
 
     # Play the noisy signal
+    print("Playing the noisy signal...")
     sd.play(noisy_signal, fs)
     sd.wait()
 
 
 # Run the test
-test_find_chirp_with_hidden_signal()
+test_find_chirp_with_loaded_data()
+
+
+
+
 
