@@ -61,9 +61,11 @@ def chirp_with_noise():
     axes[0].grid(True)
 
     # Zoomed-in view of the noisy segment
-    axes[1].plot(tt[start_idx:end_idx], sig[start_idx:end_idx], label="Noisy Segment")
-    axes[1].plot(tt[start_idx:end_idx], noise[start_idx:end_idx], label="Noise", alpha=0.5)
-    axes[1].set_title("Zoomed-In Noisy Segment (12s to 12.7s)")
+    zoom_start = start_idx
+    zoom_end = end_idx
+    axes[1].plot(tt[zoom_start:zoom_end], noise[zoom_start:zoom_end], label="Noisy Signal", alpha=0.8)
+    axes[1].plot(tt[zoom_start:zoom_end], sig, label="Original Chirp", alpha=0.6, linestyle="--")
+    axes[1].set_title("Zoomed-In View of Chirp (12s to 12.7s)")
     axes[1].set_xlabel("Time (s)")
     axes[1].set_ylabel("Amplitude")
     axes[1].grid(True)
