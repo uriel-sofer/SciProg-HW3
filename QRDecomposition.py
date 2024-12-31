@@ -49,11 +49,7 @@ def test_QR():
         [2, 1, 1],
         [1, 0, 2]
     ], dtype=float)
-    q6_matrix = np.array([
-        [1, -1],
-        [1, 1],
-        [2, 1]
-    ], dtype=float)
+    
     A_updated, Q, R = QR_decomposition(input_matrix)
     # A_updated = A_updated.astype(int)
     print("Updated Matrix A (after removing dependent columns if any):")
