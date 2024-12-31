@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import sounddevice as sd
 import numpy as np
+from contourpy.types import point_dtype
 from numpy import cos, pi
 
 def chirp_gen(duration, initial_f0 = 1000, mu_modifier = 550, fs = 44_100):
@@ -13,7 +14,7 @@ def chirp_gen(duration, initial_f0 = 1000, mu_modifier = 550, fs = 44_100):
     return t, cos(2 * pi * initial_f0 * t + 2 * pi * mu_modifier * t**2)
 
 
-def seven_second_chirp():
+def point_seven_second_chirp():
     """
     Generates chirp from hardcoded values
     """
@@ -40,25 +41,31 @@ def seven_second_chirp():
 
 def chirp_with_noise():
     """
-    Generates 20 seconds chirp signal, with noise added in the 12th second.
+    Generates 20 seconds noise signal, with chirp added in the 12th second.
     """
     fs = 44_100
-    chirp_dur = 20
+    noise_dur = 20
+    chirp_len = 0.7
 
-    tt, sig = chirp_gen(chirp_dur)
-
+    tt = np.linspace(0, noise_dur, int(fs * noise_dur), endpoint=False)
     noise = np.random.randn(len(tt)) * 0.35
-    start_idx = int(12 * fs)
-    end_idx = int(12.7 * fs)
-    sig[start_idx:end_idx] += noise[start_idx:end_idx]
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    # Full 20-second chirp
-    axes[0].plot(tt, sig, label="Full Chirp with Noise")
-    axes[0].set_title("Full 20-Second Chirp with Noise")
+    __, sig = chirp_gen(chirp_len)
+    start_idx = int(12 * fs)
+    end_idx = start_idx + len(sig)
+
+    noise[start_idx:end_idx] += sig
+
+    fig, axes = plt.subplots(2, 1, figsize=(12, 4))
+    # Full 20-second signal
+    axes[0].plot(tt, noise, label="Noisy Signal with Embedded Chirp", color="blue")
+    axes[0].axvline(12, color="red", linestyle="--", label="Chirp Start (12s)")
+    axes[0].axvline(12 + chirp_len, color="green", linestyle="--", label="Chirp End (12.7s)")
+    axes[0].set_title("Full 20-Second Noisy Signal with Chirp")
     axes[0].set_xlabel("Time (s)")
     axes[0].set_ylabel("Amplitude")
     axes[0].grid(True)
+    axes[0].legend()
 
     # Zoomed-in view of the noisy segment
     zoom_start = start_idx
@@ -118,8 +125,8 @@ def test_find_chirp_with_hidden_signal():
     """
     fs = 44_100
     chirp_dur = 5
-    noise_dur = 20
-    start_time = 7
+    noise_dur = 19
+    start_time = 12
 
     _, chirp_ref = chirp_gen(chirp_dur, fs=fs)
 
@@ -139,7 +146,7 @@ def test_find_chirp_with_hidden_signal():
 
     time_noisy_signal = np.linspace(0, noise_dur, len(noisy_signal))
 
-    play_and_display(chirp_start_time, fs, noisy_signal, time_noisy_signal, chirp_ref)
+    play_and_display(chirp_start_time, fs, noisy_signal, time_noisy_signal)
 
 
 def test_find_chirp_with_loaded_data():
@@ -157,7 +164,7 @@ def test_find_chirp_with_loaded_data():
     print("Detecting from loaded chirp...")
     # Detect chirp location
     chirp_start_time = find_chirp(xnsig, chirp, frame_size, step, fs)
-    print(f"The chirp starts at approximately {chirp_start_time:.2f} seconds.")
+    print(f"The chirp starts at {chirp_start_time:.2f} seconds.")
 
     time_xnsig = np.linspace(0, len(xnsig) / fs, len(xnsig))
 
@@ -228,9 +235,15 @@ def plot_ax2(ax2, correlation, correlation_time, max_time, max_value):
 
 
 if __name__ == "__main__":
-    # Run the test
-    test_find_chirp_with_hidden_signal()
-    test_find_chirp_with_loaded_data()
+    print("0.7 chirp:")
+    point_seven_second_chirp() # B
+    print("20 seconds noise with chirp: ")
+    chirp_with_noise() # D
+    print("Generated chirp: ")
+    test_find_chirp_with_hidden_signal() # E
+    print("Loaded data: ")
+    test_find_chirp_with_loaded_data() # F
+
 
 
 
