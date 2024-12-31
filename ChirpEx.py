@@ -74,7 +74,7 @@ def chirp_with_noise():
     plt.tight_layout()
     plt.show()
 
-    sd.play(sig, fs)
+    sd.play(noise, fs)
     sd.wait()
 
 
